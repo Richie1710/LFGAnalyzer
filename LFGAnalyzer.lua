@@ -94,6 +94,8 @@ end
 
 local configFrame
 local function createConfigUI()
+    -- Forward declare local functions that reference each other
+    local refreshAliasList, refreshWeeklyList
     if configFrame then return end
 
     local f = CreateFrame("Frame", "LFGAnalyzerConfigFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
@@ -156,7 +158,7 @@ local function createConfigUI()
     f.aliasContainer:SetPoint("TOPLEFT", f.aliasHeaderRaid, "BOTTOMLEFT", 0, -5)
     f.aliasContainer:SetSize(360, 1)
 
-    local function refreshAliasList()
+    function refreshAliasList()
         for _, row in ipairs(f.aliasRows) do
             row:Hide()
         end
@@ -254,7 +256,7 @@ local function createConfigUI()
     f.weeklyContainer:SetPoint("TOPLEFT", f.weeklyHeader, "BOTTOMLEFT", 0, -5)
     f.weeklyContainer:SetSize(360, 1)
 
-    local function refreshWeeklyList()
+    function refreshWeeklyList()
         for _, row in ipairs(f.weeklyRows) do row:Hide() end
 
         local index = 0
