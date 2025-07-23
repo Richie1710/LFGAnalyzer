@@ -155,7 +155,7 @@ local function createConfigUI()
     f.aliasEntries = {}
     f.aliasRows = {}
     f.aliasContainer = CreateFrame("Frame", nil, content)
-    f.aliasContainer:SetPoint("TOPLEFT", f.aliasHeaderRaid, "BOTTOMLEFT", 0, -5)
+    f.aliasContainer:SetPoint("TOPLEFT", f.aliasHeaderAlias, "BOTTOMLEFT", 0, -5)
     f.aliasContainer:SetSize(360, 1)
 
     function refreshAliasList()
