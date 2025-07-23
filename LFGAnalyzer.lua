@@ -110,7 +110,16 @@ local function createConfigUI()
     f.scrollFrame:SetPoint("TOPLEFT", 10, -30)
     f.scrollFrame:SetPoint("BOTTOMRIGHT", -30, 40)
 
-    local content = CreateFrame("Frame", nil, f.scrollFrame)
+    -- The UIPanelScrollFrameTemplate expects a named child frame called
+    -- <ScrollFrameName>ScrollChildFrame during its OnLoad handler. Without this
+    -- named child, the template's setup triggers an error in older clients.
+    -- Create the content frame with the expected name so the template can find
+    -- it immediately.
+    local content = CreateFrame(
+        "Frame",
+        "LFGAnalyzerConfigScrollFrameScrollChildFrame",
+        f.scrollFrame
+    )
     content:SetSize(360, 1)
     content:SetPoint("TOPLEFT")
     f.scrollFrame:SetScrollChild(content)
