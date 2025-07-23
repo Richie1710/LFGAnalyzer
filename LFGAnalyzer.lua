@@ -106,34 +106,44 @@ local function createConfigUI()
     f.title:SetPoint("TOP", 0, -10)
     f.title:SetText("LFG Analyzer Config")
 
-    f.enableCheck = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
-    f.enableCheck:SetPoint("TOPLEFT", 10, -30)
+    f.scrollFrame = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
+    f.scrollFrame:SetPoint("TOPLEFT", 10, -30)
+    f.scrollFrame:SetPoint("BOTTOMRIGHT", -30, 40)
+
+    local content = CreateFrame("Frame", nil, f.scrollFrame)
+    content:SetSize(360, 1)
+    content:SetPoint("TOPLEFT")
+    f.scrollFrame:SetScrollChild(content)
+    f.content = content
+
+    f.enableCheck = CreateFrame("CheckButton", nil, content, "UICheckButtonTemplate")
+    f.enableCheck:SetPoint("TOPLEFT")
     f.enableCheck.text = f.enableCheck:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     f.enableCheck.text:SetPoint("LEFT", f.enableCheck, "RIGHT", 0, 0)
     f.enableCheck.text:SetText("Enable")
 
-    f.debugCheck = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
+    f.debugCheck = CreateFrame("CheckButton", nil, content, "UICheckButtonTemplate")
     f.debugCheck:SetPoint("TOPLEFT", f.enableCheck, "BOTTOMLEFT", 0, -5)
     f.debugCheck.text = f.debugCheck:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     f.debugCheck.text:SetPoint("LEFT", f.debugCheck, "RIGHT", 0, 0)
     f.debugCheck.text:SetText("Debug")
 
-    f.aliasHeader = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    f.aliasHeader = content:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     f.aliasHeader:SetPoint("TOPLEFT", f.debugCheck, "BOTTOMLEFT", 0, -10)
     f.aliasHeader:SetText("Alias Zuordnungen")
 
-    f.aliasHeaderAlias = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    f.aliasHeaderAlias = content:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     f.aliasHeaderAlias:SetPoint("TOPLEFT", f.aliasHeader, "BOTTOMLEFT", 0, -5)
     f.aliasHeaderAlias:SetWidth(150)
     f.aliasHeaderAlias:SetText("Alias")
-    f.aliasHeaderRaid = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    f.aliasHeaderRaid = content:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     f.aliasHeaderRaid:SetPoint("LEFT", f.aliasHeaderAlias, "RIGHT", 10, 0)
     f.aliasHeaderRaid:SetWidth(150)
     f.aliasHeaderRaid:SetText("Raid")
 
     f.aliasEntries = {}
     f.aliasRows = {}
-    f.aliasContainer = CreateFrame("Frame", nil, f)
+    f.aliasContainer = CreateFrame("Frame", nil, content)
     f.aliasContainer:SetPoint("TOPLEFT", f.aliasHeaderRaid, "BOTTOMLEFT", 0, -5)
     f.aliasContainer:SetSize(360, 1)
 
@@ -147,7 +157,7 @@ local function createConfigUI()
             index = index + 1
             local row = f.aliasRows[index]
             if not row then
-                row = CreateFrame("Frame", nil, f)
+                row = CreateFrame("Frame", nil, content)
                 row:SetSize(360, 20)
                 if index == 1 then
                     row:SetPoint("TOPLEFT", f.aliasContainer, "TOPLEFT")
@@ -179,7 +189,7 @@ local function createConfigUI()
 
         local row = f.newAliasRow
         if not row then
-            row = CreateFrame("Frame", nil, f)
+            row = CreateFrame("Frame", nil, content)
             row:SetSize(360, 20)
             row.aliasEdit = CreateFrame("EditBox", nil, row, "InputBoxTemplate")
             row.aliasEdit:SetSize(150, 20)
@@ -220,17 +230,18 @@ local function createConfigUI()
 
         f.weeklyHeader:SetPoint("TOPLEFT", row, "BOTTOMLEFT", 0, -10)
         f.weeklyContainer:SetPoint("TOPLEFT", f.weeklyHeader, "BOTTOMLEFT", 0, -5)
+        refreshWeeklyList()
     end
 
     f.refreshAliasList = refreshAliasList
 
-    f.weeklyHeader = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    f.weeklyHeader = content:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     f.weeklyHeader:SetPoint("TOPLEFT", f.aliasContainer, "BOTTOMLEFT", 0, -10)
     f.weeklyHeader:SetText("Weekly Schlagworte")
 
     f.weeklyEntries = {}
     f.weeklyRows = {}
-    f.weeklyContainer = CreateFrame("Frame", nil, f)
+    f.weeklyContainer = CreateFrame("Frame", nil, content)
     f.weeklyContainer:SetPoint("TOPLEFT", f.weeklyHeader, "BOTTOMLEFT", 0, -5)
     f.weeklyContainer:SetSize(360, 1)
 
@@ -242,7 +253,7 @@ local function createConfigUI()
             index = index + 1
             local row = f.weeklyRows[index]
             if not row then
-                row = CreateFrame("Frame", nil, f)
+                row = CreateFrame("Frame", nil, content)
                 row:SetSize(360, 20)
                 if index == 1 then
                     row:SetPoint("TOPLEFT", f.weeklyContainer, "TOPLEFT")
@@ -267,7 +278,7 @@ local function createConfigUI()
 
         local row = f.newWeeklyRow
         if not row then
-            row = CreateFrame("Frame", nil, f)
+            row = CreateFrame("Frame", nil, content)
             row:SetSize(360, 20)
             row.edit = CreateFrame("EditBox", nil, row, "InputBoxTemplate")
             row.edit:SetSize(120, 20)
@@ -296,6 +307,8 @@ local function createConfigUI()
             row:SetPoint("TOPLEFT", f.weeklyRows[index], "BOTTOMLEFT", 0, -5)
         end
         row:Show()
+        local height = math.abs(row:GetBottom() or 0) + 30
+        content:SetHeight(height)
     end
 
     f.refreshWeeklyList = refreshWeeklyList
