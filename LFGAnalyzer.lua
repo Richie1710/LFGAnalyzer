@@ -33,8 +33,12 @@ local function analyzeMessage(fullMessage, sender)
     end
 end
 
-LFGAnalyzer:SetScript("OnEvent", function(_, _, msg, _, sender, _, _, _, channelName, ...)
-    if channelName:lower():match("world") or channelName:lower():match("global") then
+-- WoW 3.3.5 passes the channel base name as the 9th argument of CHAT_MSG_CHANNEL
+-- After the message and sender parameters. Earlier versions may differ, so we
+-- use a variable number of placeholders to reach that argument.
+LFGAnalyzer:SetScript("OnEvent", function(_, _, msg, sender, _, _, _, _, _, _, channelName, ...)
+    -- Ensure we actually received a string for the channel name
+    if type(channelName) == "string" and (channelName:lower():match("world") or channelName:lower():match("global")) then
         local timestamp = time()
 
         if sender == lastSender and (timestamp - lastTimestamp) <= timeout then
