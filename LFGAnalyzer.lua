@@ -6,6 +6,13 @@ local lastSender = nil
 local lastTimestamp = 0
 local timeout = 5 -- Sekunden
 
+-- Mapping bestimmter Bossnamen auf ihre Raids
+local bossToRaid = {
+    ["noth der seuchenfürst"] = "Naxxramas",
+    ["noth the plaguebringer"] = "Naxxramas",
+    ["lord mark'gar"] = "ICC"
+}
+
 local function resetBuffer()
     buffer = {}
     lastSender = nil
@@ -16,14 +23,23 @@ local function analyzeMessage(fullMessage, sender)
     local lower = fullMessage:lower()
     local results = {}
 
-    if lower:match("lfm") then
+    if lower:match("lfm") or lower:match("suche") or lower:match("suchen") then
         if lower:match("icc") then table.insert(results, "ICC") end
         if lower:match("toc") then table.insert(results, "ToC") end
         if lower:match("weekly") then table.insert(results, "Weekly") end
         if lower:match("voa") then table.insert(results, "VoA") end
+        if lower:match("muss sterben") then table.insert(results, "Weekly") end
         if lower:match("%d+ dds") then table.insert(results, "DPS gesucht") end
         if lower:match("tank") then table.insert(results, "Tank gesucht") end
         if lower:match("healer") then table.insert(results, "Healer gesucht") end
+
+        -- Suche nach Bossnamen
+        for boss, raid in pairs(bossToRaid) do
+            if lower:match(boss) then
+                table.insert(results, raid)
+                break
+            end
+        end
     end
 
     if #results > 0 then
