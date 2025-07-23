@@ -13,6 +13,14 @@ local timeout = 5 -- Sekunden
 -- Saved variables
 local bossToRaid = {}
 local weeklyKeywords = {}
+local enabled = true
+local debugEnabled = false
+
+local function debugPrint(msg)
+    if debugEnabled then
+        DEFAULT_CHAT_FRAME:AddMessage("|cffff8800[LFGAnalyzer Debug]|r " .. msg)
+    end
+end
 
 -- forward declarations for functions used before definition
 local toggleUI
@@ -97,6 +105,18 @@ local function createConfigUI()
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     f.title:SetPoint("TOP", 0, -10)
     f.title:SetText("LFG Analyzer Config")
+
+    f.enableCheck = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
+    f.enableCheck:SetPoint("TOPRIGHT", -10, -30)
+    f.enableCheck.text = f.enableCheck:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    f.enableCheck.text:SetPoint("LEFT", f.enableCheck, "RIGHT", 0, 0)
+    f.enableCheck.text:SetText("Enable")
+
+    f.debugCheck = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
+    f.debugCheck:SetPoint("TOPRIGHT", -10, -60)
+    f.debugCheck.text = f.debugCheck:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    f.debugCheck.text:SetPoint("LEFT", f.debugCheck, "RIGHT", 0, 0)
+    f.debugCheck.text:SetText("Debug")
 
     f.aliasHeader = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     f.aliasHeader:SetPoint("TOPLEFT", 10, -30)
@@ -185,21 +205,87 @@ local function createConfigUI()
         end
         row:Show()
 
-        f.weeklyLabel:SetPoint("TOPLEFT", row, "BOTTOMLEFT", 0, -10)
-        f.weeklyBox:SetPoint("TOPLEFT", f.weeklyLabel, "BOTTOMLEFT", 0, -5)
+        f.weeklyHeader:SetPoint("TOPLEFT", row, "BOTTOMLEFT", 0, -10)
+        f.weeklyContainer:SetPoint("TOPLEFT", f.weeklyHeader, "BOTTOMLEFT", 0, -5)
     end
 
     f.refreshAliasList = refreshAliasList
 
-    f.weeklyLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    f.weeklyLabel:SetPoint("TOPLEFT", f.aliasContainer, "BOTTOMLEFT", 0, -10)
-    f.weeklyLabel:SetText("Weekly Schlagworte (eine pro Zeile)")
+    f.weeklyHeader = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    f.weeklyHeader:SetPoint("TOPLEFT", f.aliasContainer, "BOTTOMLEFT", 0, -10)
+    f.weeklyHeader:SetText("Weekly Schlagworte")
 
-    f.weeklyBox = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
-    f.weeklyBox:SetMultiLine(true)
-    f.weeklyBox:SetSize(360, 60)
-    f.weeklyBox:SetPoint("TOPLEFT", f.weeklyLabel, "BOTTOMLEFT", 0, -5)
-    f.weeklyBox:SetAutoFocus(false)
+    f.weeklyEntries = {}
+    f.weeklyRows = {}
+    f.weeklyContainer = CreateFrame("Frame", nil, f)
+    f.weeklyContainer:SetPoint("TOPLEFT", f.weeklyHeader, "BOTTOMLEFT", 0, -5)
+    f.weeklyContainer:SetSize(360, 1)
+
+    local function refreshWeeklyList()
+        for _, row in ipairs(f.weeklyRows) do row:Hide() end
+
+        local index = 0
+        for i, kw in ipairs(f.weeklyEntries) do
+            index = index + 1
+            local row = f.weeklyRows[index]
+            if not row then
+                row = CreateFrame("Frame", nil, f)
+                row:SetSize(360, 20)
+                if index == 1 then
+                    row:SetPoint("TOPLEFT", f.weeklyContainer, "TOPLEFT")
+                else
+                    row:SetPoint("TOPLEFT", f.weeklyRows[index-1], "BOTTOMLEFT", 0, -2)
+                end
+                row.text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+                row.text:SetPoint("LEFT")
+                row.remove = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+                row.remove:SetSize(20, 20)
+                row.remove:SetText("-")
+                row.remove:SetPoint("RIGHT")
+                f.weeklyRows[index] = row
+            end
+            row.text:SetText(kw)
+            row.remove:SetScript("OnClick", function()
+                table.remove(f.weeklyEntries, i)
+                refreshWeeklyList()
+            end)
+            row:Show()
+        end
+
+        local row = f.newWeeklyRow
+        if not row then
+            row = CreateFrame("Frame", nil, f)
+            row:SetSize(360, 20)
+            row.edit = CreateFrame("EditBox", nil, row, "InputBoxTemplate")
+            row.edit:SetSize(120, 20)
+            row.edit:SetAutoFocus(false)
+            row.edit:SetPoint("LEFT")
+            row.edit:SetBackdrop({ bgFile = "Interface/Tooltips/UI-Tooltip-Background" })
+            row.edit:SetBackdropColor(0, 0, 0, 0.5)
+            row.add = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+            row.add:SetSize(20, 20)
+            row.add:SetText("+")
+            row.add:SetPoint("LEFT", row.edit, "RIGHT", 10, 0)
+            row.add:SetScript("OnClick", function()
+                local kw = row.edit:GetText():lower():gsub("^%s+", ""):gsub("%s+$", "")
+                if kw ~= "" then
+                    table.insert(f.weeklyEntries, kw)
+                    row.edit:SetText("")
+                    refreshWeeklyList()
+                end
+            end)
+            f.newWeeklyRow = row
+        end
+
+        if index == 0 then
+            row:SetPoint("TOPLEFT", f.weeklyContainer, "TOPLEFT")
+        else
+            row:SetPoint("TOPLEFT", f.weeklyRows[index], "BOTTOMLEFT", 0, -5)
+        end
+        row:Show()
+    end
+
+    f.refreshWeeklyList = refreshWeeklyList
 
     f.saveButton = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     f.saveButton:SetSize(80, 22)
@@ -215,14 +301,16 @@ local function createConfigUI()
         bossToRaid = mapping
 
         local weekly = {}
-        for line in string.gmatch(f.weeklyBox:GetText() or "", "[^\n]+") do
-            local kw = line:lower():gsub("^%s+", ""):gsub("%s+$", "")
-            if kw ~= "" then
-                table.insert(weekly, kw)
-            end
+        for _, kw in ipairs(f.weeklyEntries) do
+            table.insert(weekly, kw)
         end
         LFGAnalyzerDB.weekly = weekly
         weeklyKeywords = weekly
+
+        LFGAnalyzerDB.enabled = f.enableCheck:GetChecked()
+        enabled = LFGAnalyzerDB.enabled
+        LFGAnalyzerDB.debug = f.debugCheck:GetChecked()
+        debugEnabled = LFGAnalyzerDB.debug
 
         f:Hide()
     end)
@@ -242,12 +330,19 @@ local function toggleConfig()
             configFrame.aliasEntries[boss] = raid
         end
         configFrame.refreshAliasList()
-        configFrame.weeklyBox:SetText(table.concat(LFGAnalyzerDB.weekly or {}, "\n"))
+        configFrame.weeklyEntries = {}
+        for _, kw in ipairs(LFGAnalyzerDB.weekly or {}) do
+            table.insert(configFrame.weeklyEntries, kw)
+        end
+        configFrame.refreshWeeklyList()
+        configFrame.enableCheck:SetChecked(LFGAnalyzerDB.enabled)
+        configFrame.debugCheck:SetChecked(LFGAnalyzerDB.debug)
         configFrame:Show()
     end
 end
 
 local minimapButton
+local menuFrame
 local function updateMinimapButtonPos(angle)
     local radius = (Minimap:GetWidth() / 2) + 10
     minimapButton:SetPoint("CENTER", Minimap, "CENTER", math.cos(angle) * radius, math.sin(angle) * radius)
@@ -280,10 +375,27 @@ local function createMinimapButton()
     overlay:SetPoint("TOPLEFT")
     minimapButton.overlay = overlay
 
+    menuFrame = CreateFrame("Frame", "LFGAnalyzerMenuFrame", UIParent, "UIDropDownMenuTemplate")
+
+    local menuList = {
+        { text = "LFG Analyzer", isTitle = true, notCheckable = true },
+        { text = "Show Window", func = toggleUI, notCheckable = true },
+        { text = "Config", func = toggleConfig, notCheckable = true },
+        {
+            text = "Debug",
+            func = function()
+                debugEnabled = not debugEnabled
+                LFGAnalyzerDB.debug = debugEnabled
+            end,
+            checked = function() return debugEnabled end,
+            keepShownOnClick = true,
+        },
+    }
+
     minimapButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     minimapButton:SetScript("OnClick", function(_, button)
         if button == "RightButton" then
-            toggleConfig()
+            EasyMenu(menuList, menuFrame, "cursor", 0 , 0, "MENU")
         else
             toggleUI()
         end
@@ -344,6 +456,7 @@ function toggleUI()
 end
 
 local function analyzeMessage(fullMessage, sender)
+    debugPrint("Analyzing message from " .. sender .. ": " .. fullMessage)
     local lower = fullMessage:lower()
     local results = {}
     local roles = parseRoles(lower)
@@ -372,6 +485,7 @@ local function analyzeMessage(fullMessage, sender)
     end
 
     if #results > 0 then
+        debugPrint("Match found: " .. table.concat(results, ", "))
         DEFAULT_CHAT_FRAME:AddMessage(
             string.format("|cff00ff00[Analyzer]|r %s sucht: %s", sender, table.concat(results, ", "))
         )
@@ -384,12 +498,14 @@ end
 -- use a variable number of placeholders to reach that argument.
 LFGAnalyzer:SetScript("OnEvent", function(_, event, ...)
     if event == "CHAT_MSG_CHANNEL" then
+        if not enabled then return end
         local msg, sender, _, _, _, _, _, _, _, channelName = ...
         if type(channelName) == "string" and (channelName:lower():match("world") or channelName:lower():match("global")) then
             local timestamp = time()
 
             if sender == lastSender and (timestamp - lastTimestamp) <= timeout then
                 table.insert(buffer, msg)
+                debugPrint("Buffering message from " .. sender)
                 lastTimestamp = timestamp
             else
                 if lastSender and #buffer > 0 then
@@ -399,6 +515,7 @@ LFGAnalyzer:SetScript("OnEvent", function(_, event, ...)
                 buffer = { msg }
                 lastSender = sender
                 lastTimestamp = timestamp
+                debugPrint("New message sequence from " .. sender)
             end
         end
     elseif event == "ADDON_LOADED" then
@@ -412,9 +529,13 @@ LFGAnalyzer:SetScript("OnEvent", function(_, event, ...)
             }
             LFGAnalyzerDB.weekly = LFGAnalyzerDB.weekly or { "weekly", "muss sterben" }
             LFGAnalyzerDB.minimap = LFGAnalyzerDB.minimap or { angle = 0 }
+            LFGAnalyzerDB.enabled = (LFGAnalyzerDB.enabled ~= false)
+            LFGAnalyzerDB.debug = LFGAnalyzerDB.debug or false
 
             bossToRaid = LFGAnalyzerDB.bossToRaid
             weeklyKeywords = LFGAnalyzerDB.weekly
+            enabled = LFGAnalyzerDB.enabled
+            debugEnabled = LFGAnalyzerDB.debug
 
             createMinimapButton()
         end

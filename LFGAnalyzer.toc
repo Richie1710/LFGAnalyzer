@@ -1,6 +1,6 @@
 ## Interface: 30300
 ## Title: LFG Analyzer
 ## Notes: Analysiert Worldchat-Nachrichten nach LFM/LFG Aktivitäten
-## Version: 1.2
+## Version: 1.3
 ## SavedVariables: LFGAnalyzerDB
 LFGAnalyzer.lua
