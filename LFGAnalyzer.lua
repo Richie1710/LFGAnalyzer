@@ -63,7 +63,8 @@ end
 local function createUI()
     if LFGAnalyzer.frame then return end
 
-    local f = CreateFrame("Frame", "LFGAnalyzerFrame", UIParent, "BackdropTemplate")
+    -- Compatibility: BackdropTemplate exists only in later client versions
+    local f = CreateFrame("Frame", "LFGAnalyzerFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     f:SetSize(400, 200)
     f:SetPoint("CENTER")
     f:SetBackdrop({ bgFile = "Interface/Tooltips/UI-Tooltip-Background" })
