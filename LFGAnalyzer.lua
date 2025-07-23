@@ -98,18 +98,96 @@ local function createConfigUI()
     f.title:SetPoint("TOP", 0, -10)
     f.title:SetText("LFG Analyzer Config")
 
-    f.aliasLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    f.aliasLabel:SetPoint("TOPLEFT", 10, -30)
-    f.aliasLabel:SetText("Alias=Raid (eine pro Zeile)")
+    f.aliasHeader = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    f.aliasHeader:SetPoint("TOPLEFT", 10, -30)
+    f.aliasHeader:SetText("Alias Zuordnungen")
 
-    f.aliasBox = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
-    f.aliasBox:SetMultiLine(true)
-    f.aliasBox:SetSize(360, 100)
-    f.aliasBox:SetPoint("TOPLEFT", f.aliasLabel, "BOTTOMLEFT", 0, -5)
-    f.aliasBox:SetAutoFocus(false)
+    f.aliasEntries = {}
+    f.aliasRows = {}
+    f.aliasContainer = CreateFrame("Frame", nil, f)
+    f.aliasContainer:SetPoint("TOPLEFT", f.aliasHeader, "BOTTOMLEFT", 0, -5)
+    f.aliasContainer:SetSize(360, 1)
+
+    local function refreshAliasList()
+        for _, row in ipairs(f.aliasRows) do
+            row:Hide()
+        end
+
+        local index = 0
+        for alias, raid in pairs(f.aliasEntries) do
+            index = index + 1
+            local row = f.aliasRows[index]
+            if not row then
+                row = CreateFrame("Frame", nil, f)
+                row:SetSize(360, 20)
+                if index == 1 then
+                    row:SetPoint("TOPLEFT", f.aliasContainer, "TOPLEFT")
+                else
+                    row:SetPoint("TOPLEFT", f.aliasRows[index-1], "BOTTOMLEFT", 0, -2)
+                end
+                row.alias = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+                row.alias:SetPoint("LEFT")
+                row.raid = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+                row.raid:SetPoint("LEFT", row.alias, "RIGHT", 10, 0)
+                row.remove = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+                row.remove:SetSize(20, 20)
+                row.remove:SetText("-")
+                row.remove:SetPoint("RIGHT")
+                f.aliasRows[index] = row
+            end
+            row.alias:SetText(alias)
+            row.raid:SetText(raid)
+            row.remove:SetScript("OnClick", function()
+                f.aliasEntries[alias] = nil
+                refreshAliasList()
+            end)
+            row:Show()
+        end
+
+        local row = f.newAliasRow
+        if not row then
+            row = CreateFrame("Frame", nil, f)
+            row:SetSize(360, 20)
+            row.aliasEdit = CreateFrame("EditBox", nil, row, "InputBoxTemplate")
+            row.aliasEdit:SetSize(120, 20)
+            row.aliasEdit:SetAutoFocus(false)
+            row.aliasEdit:SetPoint("LEFT")
+            row.raidEdit = CreateFrame("EditBox", nil, row, "InputBoxTemplate")
+            row.raidEdit:SetSize(120, 20)
+            row.raidEdit:SetAutoFocus(false)
+            row.raidEdit:SetPoint("LEFT", row.aliasEdit, "RIGHT", 10, 0)
+            row.add = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+            row.add:SetSize(20, 20)
+            row.add:SetText("+")
+            row.add:SetPoint("LEFT", row.raidEdit, "RIGHT", 10, 0)
+            row.add:SetScript("OnClick", function()
+                local alias = row.aliasEdit:GetText():lower():gsub("^%s+", ""):gsub("%s+$", "")
+                local raid = row.raidEdit:GetText():gsub("^%s+", ""):gsub("%s+$", "")
+                if alias ~= "" and raid ~= "" then
+                    f.aliasEntries[alias] = raid
+                    row.aliasEdit:SetText("")
+                    row.raidEdit:SetText("")
+                    refreshAliasList()
+                end
+            end)
+            f.newAliasRow = row
+        end
+
+        if index == 0 then
+            row:SetPoint("TOPLEFT", f.aliasContainer, "TOPLEFT")
+        else
+            row:SetPoint("TOPLEFT", f.aliasRows[index], "BOTTOMLEFT", 0, -5)
+        end
+        row:Show()
+
+        f.weeklyLabel:SetPoint("TOPLEFT", row, "BOTTOMLEFT", 0, -10)
+        f.weeklyBox:SetPoint("TOPLEFT", f.weeklyLabel, "BOTTOMLEFT", 0, -5)
+    end
+
+    f.refreshAliasList = refreshAliasList
 
     f.weeklyLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    f.weeklyLabel:SetPoint("TOPLEFT", f.aliasBox, "BOTTOMLEFT", 0, -10)
+    f.weeklyLabel:SetPoint("TOPLEFT", f.aliasContainer, "BOTTOMLEFT", 0, -10)
     f.weeklyLabel:SetText("Weekly Schlagworte (eine pro Zeile)")
 
     f.weeklyBox = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
@@ -125,15 +203,8 @@ local function createConfigUI()
 
     f.saveButton:SetScript("OnClick", function()
         local mapping = {}
-        for line in string.gmatch(f.aliasBox:GetText() or "", "[^\n]+") do
-            local alias, raid = line:match("([^=]+)=(.+)")
-            if alias and raid then
-                alias = alias:lower():gsub("^%s+", ""):gsub("%s+$", "")
-                raid = raid:gsub("^%s+", ""):gsub("%s+$", "")
-                if alias ~= "" and raid ~= "" then
-                    mapping[alias] = raid
-                end
-            end
+        for alias, raid in pairs(f.aliasEntries) do
+            mapping[alias] = raid
         end
         LFGAnalyzerDB.bossToRaid = mapping
         bossToRaid = mapping
@@ -159,12 +230,13 @@ local function toggleConfig()
     if configFrame:IsShown() then
         configFrame:Hide()
     else
-        local aliasLines = {}
-        for boss, raid in pairs(LFGAnalyzerDB.bossToRaid or {}) do
-            table.insert(aliasLines, boss .. "=" .. raid)
+        for k in pairs(configFrame.aliasEntries) do
+            configFrame.aliasEntries[k] = nil
         end
-        table.sort(aliasLines)
-        configFrame.aliasBox:SetText(table.concat(aliasLines, "\n"))
+        for boss, raid in pairs(LFGAnalyzerDB.bossToRaid or {}) do
+            configFrame.aliasEntries[boss] = raid
+        end
+        configFrame.refreshAliasList()
         configFrame.weeklyBox:SetText(table.concat(LFGAnalyzerDB.weekly or {}, "\n"))
         configFrame:Show()
     end
