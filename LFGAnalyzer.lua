@@ -14,6 +14,9 @@ local timeout = 5 -- Sekunden
 local bossToRaid = {}
 local weeklyKeywords = {}
 
+-- forward declarations for functions used before definition
+local toggleUI
+
 -- Mapping bestimmter Bossnamen auf ihre Raids (geladen aus SavedVariables)
 local bossToRaid = {}
 
@@ -238,7 +241,7 @@ function LFGAnalyzer.refreshUI()
     end
 end
 
-local function toggleUI()
+function toggleUI()
     createUI()
     if LFGAnalyzer.frame:IsShown() then
         LFGAnalyzer.frame:Hide()
