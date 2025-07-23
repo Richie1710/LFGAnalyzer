@@ -106,7 +106,7 @@ local function createConfigUI()
     f.title:SetPoint("TOP", 0, -10)
     f.title:SetText("LFG Analyzer Config")
 
-    f.scrollFrame = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
+    f.scrollFrame = CreateFrame("ScrollFrame", "LFGAnalyzerConfigScrollFrame", f, "UIPanelScrollFrameTemplate")
     f.scrollFrame:SetPoint("TOPLEFT", 10, -30)
     f.scrollFrame:SetPoint("BOTTOMRIGHT", -30, 40)
 
