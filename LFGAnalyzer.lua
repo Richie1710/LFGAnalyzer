@@ -180,13 +180,28 @@ local function createMinimapButton()
     if minimapButton then return end
 
     minimapButton = CreateFrame("Button", "LFGAnalyzerMinimapButton", Minimap)
-    minimapButton:SetSize(32, 32)
+    minimapButton:SetSize(31, 31)
     minimapButton:SetFrameStrata("LOW")
     minimapButton:SetHighlightTexture("Interface/Minimap/UI-Minimap-ZoomButton-Highlight")
-    local tex = minimapButton:CreateTexture(nil, "BACKGROUND")
-    tex:SetAllPoints()
-    tex:SetTexture("Interface/ICONS/INV_Misc_GroupLooking")
-    minimapButton.texture = tex
+
+    -- Hintergrund und Umrandung wie andere Minimap-Buttons
+    local background = minimapButton:CreateTexture(nil, "BACKGROUND")
+    background:SetSize(20, 20)
+    background:SetTexture("Interface/Minimap/UI-Minimap-Background")
+    background:SetPoint("TOPLEFT", 7, -5)
+    minimapButton.background = background
+
+    local icon = minimapButton:CreateTexture(nil, "ARTWORK")
+    icon:SetSize(20, 20)
+    icon:SetTexture("Interface/ICONS/INV_Misc_GroupLooking")
+    icon:SetPoint("TOPLEFT", 7, -6)
+    minimapButton.icon = icon
+
+    local overlay = minimapButton:CreateTexture(nil, "OVERLAY")
+    overlay:SetSize(53, 53)
+    overlay:SetTexture("Interface/Minimap/MiniMap-TrackingBorder")
+    overlay:SetPoint("TOPLEFT")
+    minimapButton.overlay = overlay
 
     minimapButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     minimapButton:SetScript("OnClick", function(_, button)
